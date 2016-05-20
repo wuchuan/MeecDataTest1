@@ -34,11 +34,23 @@ public class MainActivity extends AppCompatActivity {
     private Button start;
     private Button stop;
     private TextView show;
-    private InputStream localFile1;
+
     private long copytime;
     private long countTime;
     private boolean isStop;
     private int count;
+
+    public static synchronized int getCountThread() {
+        return countThread;
+    }
+
+    public static  synchronized void setCountThread(Boolean isChange) {
+      if(isChange) countThread++;
+        else countThread--;
+    }
+
+    private static int countThread;
+    private final static int CountThread =32;
     private int nuber;
     private ArrayList<String> detleFirleName = new ArrayList<>();
     private static File logFile;
@@ -58,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                show.setText("请测试");
                 isStop = true;
                 start.setEnabled(true);
             }
@@ -65,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                show.setText("正在写入数据...");
                 long timetamp = countTime=System.currentTimeMillis();
                 String logFileName = "MeecDataTest" + "-" + timetamp + "_log.txt";
                 logFile = new File(Environment.getExternalStorageDirectory().getPath(), logFileName);
@@ -84,50 +97,93 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private class  writerThread extends Thread  {
+        private Boolean open;
+        String localFile1;
+        String file_name1;
+        public writerThread(String localFile1, String file_name1) {
+            setCountThread(true);
+            this.open=true;
+            this.localFile1=localFile1;
+            this.file_name1=file_name1;
+        }
+
+        @Override
+        public void run() {
+            try {
+                long  copytime =fileWrite(localFile1, file_name1);
+                setCountThread(false);
+//                sendmesge();
+//                this=null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private void gotest() {
         try {
+           // Log.d("wuchuan","------------------------666666666666666-----");
             while (!isStop) {
-                String file_name1 = Environment.getExternalStorageDirectory().getPath() + "/t_w_data_" + nuber;
-                File localFile2 = new File(file_name1);
-                detleFirleName.add(file_name1);
-                if (!localFile2.exists()) {
-                    localFile2.createNewFile();
-                }else{
-                    nuber++;
-                    continue;
-                }
-                localFile1 = getAssets().open("test");
-                copytime =fileWrite(localFile1, localFile2);
 
-                Message msg = new Message();
-                msg.what = 0;
-                handler.sendMessage(msg);
 
-                nuber++;
+
+               if(countThread<CountThread) {
+                   nuber++;
+                   String file_name1 = Environment.getExternalStorageDirectory().getPath() + "/t_w_data_" + nuber;
+                   File cunta = new File(file_name1);
+                   detleFirleName.add(file_name1);
+                   if (cunta.exists()) {
+                       // Log.d("wuchuan","------"+file_name1+"------------------存在");
+                       continue;
+                   }
+
+                   // Log.d("wuchuan","-----------------------------"+countThread);
+
+                   // Log.d("wuchuan","-----------------------------"+nuber);
+                   new writerThread("test", file_name1).start();
+//                   new writerThread("test_100M", file_name1).start();
+//                   new writerThread("test_50M", file_name1).start();
+
+               }
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (Exception e) {
         }
 
 
     }
 
-    private long fileWrite(InputStream localFile1, File localFile2) throws IOException {
+    private synchronized void sendmesge(){
+        Message msg = new Message();
+        msg.what = 0;
+       // Log.d("wuchuan","-------------------4444444444444444444444----------sendmesge");
+        handler.sendMessage(msg);
 
+    }
+
+    private long fileWrite(String localFile1, String file_name1) throws IOException {
+//        Log.d("wuchuan","-----------------------------");
         long begin = System.currentTimeMillis();
+        File localFile2 = new File(file_name1);
         FileOutputStream fos = new FileOutputStream(localFile2);
-        int readLen = 0;
-        byte[] buf = new byte[1024];
-        while ((readLen = localFile1.read(buf)) != -1) {
-            fos.write(buf, 0, readLen);
+        InputStream fsin = getAssets().open(localFile1);
+//        java.io.FileInputStream fis = new java.io.FileInputStream(srcPath);
+//        java.io.FileOutputStream fos = new java.io.FileOutputStream(destPath);
+        java.io.BufferedInputStream bis = new java.io.BufferedInputStream(fsin);
+        java.io.BufferedOutputStream bos = new java.io.BufferedOutputStream(fos);
+        int rd = bis.read();
+        while (rd!=-1){
+            bos.write(rd);
+            rd = bis.read();
         }
         fos.flush();
         fos.close();
-        localFile1.close();
+        fsin.close();
         long end = System.currentTimeMillis();
+//        Log.d("wuchuan","-----------------------------1");
+        sendmesge();
         return end - begin;
 
     }
@@ -141,27 +197,29 @@ public class MainActivity extends AppCompatActivity {
                     long endtiem = System.currentTimeMillis();
                     BigDecimal copytime1 = new BigDecimal((copytime) / 1000.0D);
                     BigDecimal countTime1 = new BigDecimal((endtiem-countTime )/ 60000.0D);
-                    BigDecimal countszie = new BigDecimal(count * 0.01024);
+                    BigDecimal countszie = new BigDecimal(count * 0.0100);
                     double copytime2 = copytime1.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
                     double countTime2 = countTime1.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
                     double countszie1 = countszie.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
 
                     show.setText("第" + count + "次  "
-                            + "输入10.24M用时" + copytime2 + "秒"
+                          //  + "输入10.24M用时" //+ copytime2 + "秒"
                             + "------>ok  "
                             + "用时总计：" + countTime2 + "分"
                             + " 总写入：" + countszie1 + "G");
-                    if (countszie1 > 2048) {//2048
-                        show.setText("测试完成！  " + "总写入大小："+countszie1+"G"+"  总时间："+countTime2/60+"天");
-                        stop.performClick();
-                    }
-
-                   final String message = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                    final String message = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                             .format(new Date())
                             + "\n"
                             +show.getText().toString()
                             + "\n";
+                    if (countszie1 > 2048) {//2048
+                        show.setText("测试完成！  " + "总写入大小："+countszie1+"G"+"  总时间："+countTime2/60+"天");
+                        stop.performClick();
+                        saveLog(message, null);
+                    }
 
+
+                     if(count%100==0)
                            saveLog(message, null);
 
 
@@ -192,10 +250,10 @@ public class MainActivity extends AppCompatActivity {
 
             while (!isStop) {
 
-                if (getAvailableBlocks() < 500) {
+                if (getAvailableBlocks() < 500&&(detleFirleName.size()>CountThread)) {
                     try {
                         sleep(10000);
-                        for (int i = 0; i < detleFirleName.size() - 2; i++) {
+                        for (int i = 0; i < detleFirleName.size() - CountThread; i++) {
 
                             deleteMyFile(detleFirleName.get(i));
                             detleFirleName.remove(i);
