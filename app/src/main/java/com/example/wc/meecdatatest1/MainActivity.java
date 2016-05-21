@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,8 +39,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean isStop;
     private int count;
     private int countsize, countthread;
-
-
+    private final int COUNTSIZE = 10; //初始化拷被大小
+    private final int COUNTTHREAD = 4;//初始化线程数
+    private long firstTime = 0;
 
     public static synchronized void setCountThread(Boolean isChange) {
         if (isChange) countThread++;
@@ -69,51 +71,70 @@ public class MainActivity extends AppCompatActivity {
         show = (TextView) findViewById(R.id.show);
         show_thread_count = (TextView) findViewById(R.id.show_thread_count);
         show_size_count = (TextView) findViewById(R.id.show_size_count);
-         countthread=1;
-        countsize=20;
-        show_thread_count.setText("countthread:"+countthread);
-        show_size_count.setText("size:"+countsize+"M");
+        countthread = COUNTTHREAD;
+        countsize = COUNTSIZE;
+        show_thread_count.setText("countthread:" + countthread);
+        show_size_count.setText("size:" + countsize + "M");
         thread_less.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(countthread>1&&countthread<17)
-                countthread--;
-                show_thread_count.setText("countthread:"+countthread);
+                if (countthread > 1 && countthread <= 16)
+                    countthread--;
+                show_thread_count.setText("countthread:" + countthread);
             }
         });
         thread_add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(countthread>0&&countthread<17)
-                countthread++;
-                show_thread_count.setText("countthread:"+countthread);
+                if (countthread >= 1 && countthread < 16) {
+                    countthread++;
+                }
+                show_thread_count.setText("countthread:" + countthread);
             }
         });
         size_add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(countsize>1&&countsize<205)
-                countsize=countsize+5;
-                show_size_count.setText("size:"+countsize+"M");
+                if (countsize >= 10 && countsize < 200) {
+                    countsize = countsize + 10;
+                }
+                show_size_count.setText("size:" + countsize + "M");
             }
         });
         size_less.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(countsize>1&&countsize<205)
-                countsize=countsize-5;
-                show_size_count.setText("size:"+countsize+"M");
+                if (countsize > 10 && countsize <= 200)
+                    countsize = countsize - 10;
+                show_size_count.setText("size:" + countsize + "M");
 
             }
         });
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                show.setText("请测试");
-                countsize=10;
-                countthread=4;
-                isStop = true;
-                start.setEnabled(true);
+
+                long secondTime = System.currentTimeMillis();
+                if (secondTime - firstTime > 2000) {                                         //如果两次按键时间间隔大于2秒，则不退出
+                    Toast.makeText(getBaseContext(), "再按一次停止测试", Toast.LENGTH_SHORT).show();
+                    firstTime = secondTime;//更新firstTime
+                } else {
+                    show.setText("测试停止");
+                    countTime = 0;
+                    countThread = 0;
+                    countsize = COUNTSIZE;
+                    countthread = COUNTTHREAD;
+                    count = 0;
+                    cuntmax = 0;
+                    firstsize=0;
+                    isStop = true;
+                    start.setEnabled(true);
+                    thread_less.setEnabled(true);
+                    thread_add.setEnabled(true);
+                    size_add.setEnabled(true);
+                    size_less.setEnabled(true);
+
+                }
 
 
             }
@@ -121,21 +142,27 @@ public class MainActivity extends AppCompatActivity {
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 show.setText("正在写入数据...");
-                long timetamp = countTime = System.currentTimeMillis();
-                String logFileName = "MeecDataTest" + "-" + timetamp + "_log.txt";
+                countTime = System.currentTimeMillis();
+                String logFileName = "EmccDataTest" + "-" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                        .format(new Date()) + "_log.txt";
                 logFile = new File(Environment.getExternalStorageDirectory().getPath(), logFileName);
                 isStop = false;
 
-                new Thread("4") {
+                new Thread("manthread") {
                     @Override
                     public void run() {
                         gotest();
                     }
                 }.start();
-                deltefileThread mythreath = new deltefileThread();
+                deltefileThread mythreath = new deltefileThread("deletethread");
                 mythreath.start();
                 start.setEnabled(false);
+                thread_less.setEnabled(false);
+                thread_add.setEnabled(false);
+                size_add.setEnabled(false);
+                size_less.setEnabled(false);
             }
         });
     }
@@ -145,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
         String file_name1;
 
         public writerThread(String size, String file_name1) {
+            super("writeThread_" + nuber);
             setCountThread(true);
             this.size = size;
             this.file_name1 = file_name1;
@@ -155,8 +183,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 fileWrite(size, file_name1);
                 setCountThread(false);
-//                sendmesge();
-//                this=null;
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -175,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
                     if (cunta.exists()) {
                         continue;
                     }
-                    new writerThread(countsize+"", file_name1).start();
+                    new writerThread(countsize + "", file_name1).start();
                 }
             }
         } catch (Exception e) {
@@ -184,18 +210,23 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private synchronized void sendmesge() {
+    private synchronized void sendmesge(double speed1) {
         Message msg = new Message();
         msg.what = 0;
+        msg.obj = speed1;
         handler.sendMessage(msg);
 
     }
 
     private int fileWrite(String size, String file_name1) throws IOException {
         int l = 9;
+        long startTime = System.currentTimeMillis();
         try {
-            Log.d("wuchuan", "-----------------------------" + size + "         " + file_name1+"    "+"dd if=/dev/zero of=" + file_name1 + " bs=1m  count=" + size);
             Process process = Runtime.getRuntime().exec("dd if=/dev/zero of=" + file_name1 + " bs=1m  count=" + size);
+            if (isStop) {
+                process.destroy();
+                return l;
+            }
             l = process.waitFor();
         } catch (IOException e) {
             Log.e("runtime", e.toString());
@@ -203,47 +234,74 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        Log.d("wuchuan", "-----------------------------" + l);
-        sendmesge();
+        long endtTime = System.currentTimeMillis();
+        BigDecimal speed = new BigDecimal(Integer.valueOf(size) / ((endtTime - startTime) / 1000.0D));
+        double speed1 = speed.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
+        sendmesge(speed1);
         return l;
 
     }
 
     private double cuntmax;
+    private double firstsize;
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 0:
-                    count++;
-                    cuntmax=cuntmax+( countsize*0.00097);
-                    long endtiem = System.currentTimeMillis();
-                    BigDecimal countTime1 = new BigDecimal((endtiem - countTime) / 60000.0D);
-                    BigDecimal countszie = new BigDecimal(cuntmax);
-                    double countTime2 = countTime1.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
-                    double countszie1 = countszie.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
+                    if (!isStop) {
+                        count++;
+                        cuntmax = cuntmax + (countsize * 0.00097);
+                        long endtiem = System.currentTimeMillis();
+                        BigDecimal countTime1 = new BigDecimal((endtiem - countTime) / 60000.0D);
+                        BigDecimal countszie = new BigDecimal(cuntmax);
+                        double countTime2 = countTime1.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
+                        double countszie1 = countszie.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
+                        BigDecimal speed = new BigDecimal(cuntmax / ((endtiem - countTime) / 1000.0D) / 0.00097);
+                        double speed1 = speed.setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
 
-                    show.setText("第" + count + "次  "
-                            //  + "输入10.24M用时" //+ copytime2 + "秒"
-                            + "------>ok  "
-                            + "用时总计：" + countTime2 + "分"
-                            + " 总写入：" +countszie1 + "G");
-                    final String message = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-                            .format(new Date())
-                            + "\n"
-                            + show.getText().toString()
-                            + "\n";
-                    if (countszie1 > 2048) {//2048
-                        show.setText("测试完成！  " + "总写入大小：" + countszie1 + "G" + "  总时间：" + countTime2 / 60 + "天");
-                        stop.performClick();
-                        saveLog(message, null);
+                        show.setText(
+                                "第" + count + "次  " + "------>ok  "
+                                        + "\n"
+                                        + "本次写入速度为：" + msg.obj.toString() + "M/s"
+                                        + "\n"
+                                        + "平均写入速度为：" + speed1 + "M/s"
+                                        + "\n"
+                                        + "总耗时：" + secToTime((int) ((endtiem - countTime) / 1000))
+                                        + "\n"
+                                        + "总写入：" + countszie1 + "G");
+
+
+                        if (countszie1 > 2048) {//2048
+
+                            String showStr = "测试完成！  " + "总写入大小：" + countszie1 + "G" + "  总时间：" + countTime2 + "分钟" + "  平均写入速度为：" + speed1 + "M/s";
+                            show.setText(showStr);
+                            saveLog(showStr, null);
+                            countTime = 0;
+                            countThread = 0;
+                            countsize = COUNTSIZE;
+                            countthread = COUNTTHREAD;
+                            count = 0;
+                            cuntmax = 0;
+                            firstsize=0;
+                            isStop = true;
+                            start.setEnabled(true);
+                            thread_less.setEnabled(true);
+                            thread_add.setEnabled(true);
+                            size_add.setEnabled(true);
+                            size_less.setEnabled(true);
+                        }
+
+                        if (cuntmax - firstsize > 0.5) {
+                            firstsize=cuntmax;
+                            final String message = "\n" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                                    .format(new Date())
+                                    + "\n"
+                                    + show.getText().toString();
+                            saveLog(message, null);
+                        }
+
                     }
-
-
-                    if (count % 100 == 0)
-                        saveLog(message, null);
-
-
                     break;
                 case 1:
                     break;
@@ -265,15 +323,19 @@ public class MainActivity extends AppCompatActivity {
     class deltefileThread extends Thread {
 
 
+        public deltefileThread(String deletethread) {
+            super(deletethread);
+        }
+
         @Override
         public void run() {
 
             while (!isStop) {
 
-                if (getAvailableBlocks() < 500 && (detleFirleName.size() > 4)) {
+                if (getAvailableBlocks() < 500 && (detleFirleName.size() > countthread + 3)) {
                     try {
-                        sleep(10000);
-                        for (int i = 0; i < detleFirleName.size() - 4; i++) {
+                        sleep(1000);
+                        for (int i = 0; i < detleFirleName.size() - countthread - 3; i++) {
 
                             deleteMyFile(detleFirleName.get(i));
                             detleFirleName.remove(i);
@@ -302,13 +364,47 @@ public class MainActivity extends AppCompatActivity {
         try {
             RandomAccessFile raf = new RandomAccessFile(logFile, "rwd");
             raf.seek(logFile.length());
-            raf.write(msg.getBytes("gb2312"));
+            raf.write(msg.getBytes("UTF-8"));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    public static String secToTime(int time) {
+        String timeStr = null;
+        int hour = 0;
+        int minute = 0;
+        int second = 0;
+        if (time <= 0)
+            return "00:00";
+        else {
+            minute = time / 60;
+            if (minute < 60) {
+                second = time % 60;
+                timeStr = "00:" + unitFormat(minute) + ":" + unitFormat(second);
+            } else {
+                hour = minute / 60;
+//                if (hour > 99)
+//                    return "99:59:59";
+                minute = minute % 60;
+                second = time - hour * 3600 - minute * 60;
+                timeStr = unitFormat(hour) + ":" + unitFormat(minute) + ":" + unitFormat(second);
+            }
+        }
+        return timeStr;
+    }
+
+    public static String unitFormat(int i) {
+        String retStr = null;
+        if (i >= 0 && i < 10)
+            retStr = "0" + String.valueOf(i);
+        else
+            retStr = "" + i;
+        return retStr;
+    }
+
 
     /**
      * Checks if the app has permission to write to device storage

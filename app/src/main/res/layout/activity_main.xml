@@ -42,7 +42,7 @@
         android:gravity="center|fill_horizontal">
 
         <Button
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:text="-"
             android:id="@+id/thread_less"
@@ -50,7 +50,7 @@
             android:layout_gravity="bottom" />
 
         <TextView
-            android:layout_width="20dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
@@ -59,21 +59,23 @@
 
         <Button
             style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:text="+"
             android:id="@+id/thread_add"
             />
+
         <Button
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
             android:text="-"
             android:id="@+id/size_less"
 
           />
 
         <TextView
-            android:layout_width="20dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
@@ -82,7 +84,7 @@
 
         <Button
             style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:text="+"
             android:id="@+id/size_add"
